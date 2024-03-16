@@ -9,189 +9,110 @@ import plotly.graph_objects as go
 import plotly.express as px
 import requests
 
-def get_data(symbol, start_date, end_date):
-    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol='+symbol+'&outputsize=full&apikey=IAGDKXNPPS0NVXYR'
-    r = requests.get(url)
-    data = r.json()
-    time_series = data['Time Series (Daily)']
-    start_timestamp = int(start_date.timestamp())
-    end_timestamp = int(end_date.timestamp())
-    filtered_data = {date: values for date, values in time_series.items() 
-                     if start_timestamp <= datetime.datetime.strptime(date, '%Y-%m-%d').timestamp() <= end_timestamp}
-    return filtered_data
 
-def fetch_candlestick_data(ticker):
-    end_date = int(time.time())
-    start_date = int(time.mktime((datetime.datetime.now() - datetime.timedelta(days=365)).timetuple()))
-    data = get_data(ticker, start_date, end_date)
-    return data
 
-# fetch_candlestick_data("AAPL")
-def create_line_chart(symbols):
-    end_date = int(time.time())
-    start_date = int(time.mktime((datetime.datetime.now() - datetime.timedelta(days=365)).timetuple()))
+
+addr_state = ['CA', 'TX', 'NY', 'FL', 'IL', 'NJ', 'PA', 'OH', 'GA', 'NC', 'VA', 'MI', 'AZ', 'MD', 'MA', 'CO', 'WA', 'MN', 'IN', 'TN', 'MO', 'NV', 'CT', 'WI', 'AL', 'OR', 'SC', 'LA', 'KY', 'OK', 'KS', 'AR', 'UT', 'MS', 'NM', 'HI', 'NH', 'RI', 'WV', 'NE', 'DE', 'MT', 'DC', 'AK', 'WY', 'VT', 'SD', 'ME', 'ND ', 'ID']
+purpose = ['debt_consolidation','credit_card','home_improvement','other','major_purchase',
+           'medical','car','small_business','moving','vacation','house',
+           'renewable_energy','wedding','educational']
+verification_status = ["Source Verified","Not Verified","Verified"]
+initial_list_status = ['w','f']
+application_type  = ["Individual","Joint App"]
+home_ownership= ["MORTGAGE","RENT","OWN","ANY","NONE"]
+
+
+
+user_input = pd.DataFrame(columns=X_test.columns)
+user_input['id'] = user_input['id'].astype(str)
+
+loan_details = {
+    'loan_amnt': 8000.0,
+    'term': 36,
+    'int_rate': 15.99,
+    'installment': 300.50,
+    'emp_length': 3.0,
+    'annual_inc': 65000.0,
+    'issue_d': 10.235,
+    'zip_code': 92101,
+    'dti': 18.5,
+    'earliest_cr_line': 15.0,
+    'open_acc': 10.0,
+    'pub_rec': 0.0,
+    'revol_bal': 5000.0,
+    'revol_util': 30.5,
+    'total_acc': 20.0
+}
+
+# Assign loan details to the first row of user_input DataFrame
+for key, value in loan_details.items():
+    user_input.at[0, key] = value
+
+# Function to update user_input DataFrame based on addr_state selection
+def update_user_input(user_input, value):
+    if value in addr_state:
+        user_input.at[0, f'addr_state_{value}'] = 1
+    elif value in purpose:
+#         if f'purpose_' in user_input.columns:
+#             user_input.drop(columns=[f'purpose_'], inplace=True)
+        user_input.at[0, f'purpose_{value.replace(" ", "_")}'] = 1
+    elif value in verification_status:
+        user_input.at[0, f'verification_status_{value.replace(" ", "_")}'] = 1
+    elif value in initial_list_status:
+        user_input.at[0, f'initial_list_status_{value}'] = 1
+    elif value in application_type:
+        user_input.at[0, f'application_type_{value.replace(" ", "_")}'] = 1
+    elif value in home_ownership:
+        user_input.at[0, f'home_ownership_{value}'] = 1
     
-    fig = go.Figure()
-    colors = px.colors.qualitative.Plotly  # Get the qualitative color palette from Plotly Express
-    for i, symbol in enumerate(symbols):
-        data = get_data(symbol, start_date, end_date)
-        if data:
-            dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in data.keys()]
-            prices = [float(data[date]['4. close']) for date in data.keys()]
-            fig.add_trace(go.Scatter(x=dates, y=prices, mode='lines', name=symbol, line=dict(color=colors[i % len(colors)])))
+    return user_input
 
-    fig.update_layout(title="Stock Prices",
-                      xaxis_title="Date",
-                      yaxis_title="Price ($)",
-                      xaxis_rangeslider_visible=False)
 
-    return fig
-    
-def efficient_frontier(df, n_portfolios=100):
-    # Calculate the covariance matrix for the portfolio.
-    portfolio_covariance = df.cov()
+user_addr_state = input("Enter the addr_state: ")
+user_input = update_user_input(user_input, user_addr_state)
 
-    # Lists to store weights, returns and risk values.
-    portfolio_returns = []
-    portfolio_stds = []
-    coin_weights = []
-    pair = []
+purpose = input("Enter the loan purpose: ")
+user_input = update_user_input(user_input, purpose)
 
-    coin_names = df.columns
-    coin_means = df.mean().to_numpy()
+verification_status = input("Enter the verification_status: ")
+user_input = update_user_input(user_input, verification_status)
 
-    # Generate data, giving each coin a random weight.
-    while len(portfolio_stds) < n_portfolios:
-        # Initial values.
-        check = False
-        portfolio_return = 0
+initial_list_status = input("Enter the initial_list_status: ")
+user_input = update_user_input(user_input, initial_list_status)
+                               
+application_type = input("Enter the application_type: ")
+user_input = update_user_input(user_input, application_type)
 
-        # Make a portfolio with random weights for each coin.
-        coin_weight = np.random.random(len(coin_names))
-        # Normalise to 1.
-        coin_weight /= np.sum(coin_weight)
+home_ownership = input("Enter the home_ownership: ")
+user_input = update_user_input(user_input, home_ownership)
 
-        # Calculate the expected return value of the random portfolio.
-        for i in range(len(coin_names)):
-            portfolio_return += coin_weight[i] * coin_means[i]
-        #---Calculate variance, use it for the deviation.
-        portfolio_variance = np.dot(np.dot(coin_weight.transpose(), portfolio_covariance), coin_weight)
-        portfolio_std = np.sqrt(portfolio_variance)
+user_input.fillna(0, inplace=True)
+user_input
 
-        pair.append([portfolio_return, portfolio_std])
-        for R,V in pair:
-            if (R > portfolio_return) and (V < portfolio_std):
-                check = True
-                break
-        if check:
-            continue
 
-        portfolio_stds.append(portfolio_std)
-        portfolio_returns.append(portfolio_return)
-        coin_weights.append([i * 100 for i in coin_weight])
+# Dropdown menus for specific columns
+user_addr_state = st.selectbox("Select addr_state:", addr_state)
+purpose = st.selectbox("Select loan purpose:", purpose)
+verification_status = st.selectbox("Select verification status:", verification_status)
+initial_list_status = st.selectbox("Select initial list status:", initial_list_status)
+application_type = st.selectbox("Select application type:", application_type)
+home_ownership = st.selectbox("Select home ownership:", home_ownership)
 
-    ef_df = pd.DataFrame(coin_weights)
-    ef_df.columns = coin_names
-    ef_df.insert(0, "Return", portfolio_returns, True)
-    ef_df.insert(1, "Risk", portfolio_stds, True)
-    return ef_df, portfolio_stds, portfolio_returns
+# Update user_input based on dropdown selections
+user_input = update_user_input(user_input, user_addr_state)
+user_input = update_user_input(user_input, purpose)
+user_input = update_user_input(user_input, verification_status)
+user_input = update_user_input(user_input, initial_list_status)
+user_input = update_user_input(user_input, application_type)
+user_input = update_user_input(user_input, home_ownership)
 
-def users_point(df, coin_weight):
-    # Calculate the covariance matrix for the portfolio.
-    portfolio_covariance = df.cov()
-    coin_names = df.columns
-    coin_means = df.mean().to_numpy()
-    
-    # Normalise to 1.
-    coin_weight /= np.sum(coin_weight)
-    
-    portfolio_return = 0
-    
-    # Calculate the expected return value of the random portfolio.
-    for i in range(0, len(coin_names)):
-        portfolio_return += coin_weight[i] * coin_means[i]
-    #---Calculate variance, use it for the deviation.
-    portfolio_variance = np.dot(np.dot(coin_weight.transpose(), portfolio_covariance), coin_weight)
-    portfolio_std = np.sqrt(portfolio_variance)
+# # Display the updated user input DataFrame
+# st.write(user_input)
 
-    return portfolio_std, portfolio_return
-
-def main():
-    st.title('Nasdaq Portfolio Analysis')
-    st.write('Select tickers and their weights to analyze the efficient frontier of your portfolio.')
-
-    nasdaq_tickers = pd.read_csv("nasdaq-listed.csv")['Symbol']
-
-    selected_coins = st.multiselect(label="Select tickers: ", options=nasdaq_tickers)
-
-    buttons = {}
-    if selected_coins != []:
-        st.markdown("Enter the percentage each tickers contributes to your portfolio's total value.")
-        for coin_code in selected_coins:
-            buttons[coin_code] = st.number_input(coin_code, 0, 100, key=coin_code)
-
-        n_portfolios = st.slider('Choose number of randomly generated portfolios.', 20, 500, value=200)
-
-        if st.button("Analyse"):
-            if len(selected_coins) < 2:
-                st.warning("You must enter at least two tickers")
-            elif sum(buttons.values()) != 100:
-                st.warning("Portfolio total is not 100%.")
-            else:
-                coin_percentages = [buttons.get(coin, 0) for coin in selected_coins]
-
-                end_date = datetime.datetime.now().date()
-                start_date = end_date - datetime.timedelta(days=365)
-
-                data = {}
-                for symbol in selected_coins:
-                    data[symbol] = get_data(symbol, start_date, end_date)
-
-                df = pd.DataFrame.from_dict({(i, j): data[i][j] 
-                                              for i in data.keys() 
-                                              for j in data[i].keys()},
-                                             orient='index')
-
-                # Assuming '4. close' is the column containing closing prices
-                df['4. close'] = pd.to_numeric(df['4. close'], errors='coerce')
-
-                # Reshape DataFrame
-                df.reset_index(inplace=True)
-                df['index'] = pd.to_datetime(df['index'])
-                df.set_index('index', inplace=True)
-                df.columns = selected_coins
-
-                ef_df, portfolio_stds, portfolio_returns = efficient_frontier(df[selected_coins], n_portfolios)
-
-                fig = go.Figure()
-                for i, row in ef_df.iterrows():
-                    fig.add_trace(go.Scatter(x=[row['Risk']], y=[row['Return']], mode='markers', marker=dict(color='blue')))
-
-                users_risk, users_return = users_point(df[selected_coins], coin_percentages)
-                fig.add_trace(go.Scatter(x=[users_risk], y=[users_return], mode='markers', marker=dict(color='green'), name='Your Portfolio'))
-
-                df_optimal_return = find_optimal_return(ef_df, users_risk)
-                fig.add_trace(go.Scatter(x=[df_optimal_return['Risk']], y=[df_optimal_return['Return']], mode='markers', marker=dict(color='red'), name='Optimal Return (same risk)'))
-
-                df_optimal_risk = find_optimal_risk(ef_df, users_return)
-                fig.add_trace(go.Scatter(x=[df_optimal_risk['Risk']], y=[df_optimal_risk['Return']], mode='markers', marker=dict(color='orange'), name='Optimal Risk (same return)'))
-
-                fig.update_layout(title="Efficient Frontier Analysis",
-                                  xaxis_title="Risk (%)",
-                                  yaxis_title="Return (%)",
-                                  legend=dict(x=0, y=1, traceorder='normal'))
-
-                st.plotly_chart(fig)                     
-                st.markdown(f"**Your portfolio risk is **{users_risk:.1f}%")
-                st.markdown(f"**Your expected daily returns are **{users_return:.2f}%")
-        
-                st.header("Maximum returns portfolio (same risk)")
-                st.markdown("Maximising your expected returns, whilst keeping the risk the same, your portfolio should look like:") 
-                st.dataframe(df_optimal_return.round(2))
-                
-                st.header("Minimum risk portfolio (same returns)")
-                st.markdown("Minimising your risk, whilst keeping the returns the same, your portfolio should look like:")
-                st.dataframe(df_optimal_risk.round(2))
+# Make predictions using the trained AutoML model
+predictions = automl2.predict_proba(user_input)
+prediction_percentage = 1- predictions[0][0] * 100
+st.write(f"Probability of Default: {prediction_percentage:.2f}%")    
 
 if __name__ == "__main__":
     main()
